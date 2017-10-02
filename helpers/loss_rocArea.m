@@ -1,7 +1,7 @@
 function loss= loss_rocArea(label, out, varargin)
 %LOSS_ROCAREA - Loss function: Area over the ROC curve
 %
-%Synopsis:
+% Synopsis:
 % LOSS= loss_rocArea(LABEL, OUT)
 %
 % IN  LABEL - matrix of true class labels, size [nClasses nSamples]
@@ -9,7 +9,7 @@ function loss= loss_rocArea(label, out, varargin)
 %
 % OUT LOSS  - loss value (area over roc curve)
 %
-%Note: This loss function is for 2-class problems only.
+% Note: This loss function is for 2-class problems only.
 %
 % Benjamin Blankertz
 %

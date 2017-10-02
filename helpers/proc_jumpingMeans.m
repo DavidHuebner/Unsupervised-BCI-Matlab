@@ -23,7 +23,6 @@ function dat= proc_jumpingMeans(dat, nSamples, nMeans)
 if nargin==0
     dat=[];return
 end
-%misc_checkType(dat, 'STRUCT(x)');
 
 [T, nChans, nMotos]= size(dat.x);
 if length(nSamples)==1,
@@ -43,7 +42,7 @@ elseif size(nSamples,1)==1 && size(nSamples,2)~=2,
     intervals= nSamples([1:end-1; 2:end]');
     dat= proc_jumpingMeans(dat, intervals);
     
-else    
+else
     nMeans= size(nSamples ,1);
     da = zeros(nMeans, nChans, nMotos);
     for i = 1:size(nSamples,1),
@@ -53,8 +52,8 @@ else
             I = find(dat.t>=nSamples(i,1) & dat.t<=nSamples(i,2));
             da(i,:,:) = mean(dat.x(I,:,:),1);
         end
-    end    
+    end
     dat.x = da;
     dat= rmfield(dat, 'fs');
-    dat.t = mean(nSamples, 2)';    
+    dat.t = mean(nSamples, 2)';
 end

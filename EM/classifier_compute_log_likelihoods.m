@@ -7,7 +7,7 @@ function likelihoods = classifier_compute_log_likelihoods(classifier,projection)
 % 
 % In this function the probability p(x|w,a) = N(x^T*w|y(a),beta) is
 % computed (see Page 6 in the paper "True Zero-Training Brain-Computer
-% Interfaces"). 
+% Interfaces"). Here, beta is chosen to be 1.
 %
 % classifier.label are the rescaled target and non-target class labels. 
 % One can show that when they are chosen as N/N+ and N/N- respectively,

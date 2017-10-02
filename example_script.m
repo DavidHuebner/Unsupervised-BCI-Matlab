@@ -1,12 +1,17 @@
 %% Example script
-% This function simulates the training of an unsupervised classifier
+% This function simulates the training of an unsupervised classifier on 
+% visual ERP data
 %
 % To begin the example, load data from the Zenodo repository
 %
-% https://zenodo.org/deposit/192684
+% https://zenodo.org/record/192684
 %
 % and extract it to a local folder <your_data_path>;. Also, make sure that
-% you cloned this whole GitHub repository. You can then run this example.
+% you cloned this whole GitHub repository. 
+%
+% https://github.com/DavidHuebner/Unsupervised-BCI-Matlab
+%
+% You can then run this example.
 %
 % Please report any problems to david.huebner@blbt.uni-freiburg.de
 %
@@ -15,11 +20,11 @@
 % !! Set your data path !!
 your_data_path = '';
 
-% Add required paths to the Matlab repository
+% Change to the current folder and add required paths to the Matlab repository
 addpath('EM')
 addpath('helpers')
 
-% Load stimuli and epoch data for subject 1
+% Load stimuli and epoch data for subject 1 (out of 13)
 load(fullfile(your_data_path,'S1.mat'));
 
 % Load the sequence data for LLP indicating whether epoch k was part of
@@ -30,11 +35,13 @@ load(fullfile(your_data_path,'sequence.mat'));
 % the 6 given intervals
 fv = proc_jumpingMeans(epo,[50 120; 121 200; 201 280;281 380;381 530; 531 700]);
 
-% Bring feature matrix in the shape [N * feat_dim]
+% Bring feature matrix in the shape [N * feat_dim] 
+% where feat_dim = n_channels * n_time_intervals
 data = reshape(fv.x,31*6,12852)';
 
-% Stimuli encodes which symbols are highlighted for each stimulus.
-% Shape: [feat_dim * N] with entry (i,j) is 1 if symbol i was highlighted
+% Next, look at "stimuli" which encodes which symbols are highlighted for
+% each visual highlighting event (stimulus)
+% Shape: [feat_dim * N] with entry(i,j)=1 if symbol i was highlighted
 % during epoch j and 0 else.
 stimuli = epo.stimuli;
 
@@ -61,12 +68,12 @@ y = epo.y(1,:);
 rng(1234);
 
 % [OPTIONAL]: Which trials should be analyzed If no values "[]" are given,
-% then the whole data set is analyzed.
+% then the whole data set is analyzed. 
 trials = 1:23;
 
-%%%%%%%%% Run 
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Run %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
 C = simulate_MIX(data,stimuli,sequence,y,nr_ept,A,gamma,trials);
-%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Obtain and display spelled symbols
 [probs,select]=max(C.classifier.probs,[],2);

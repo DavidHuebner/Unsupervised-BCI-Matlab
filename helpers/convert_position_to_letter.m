@@ -1,7 +1,6 @@
 function letter = convert_position_to_letter( pos )
-% Converts a position in a matrix to the corresponding letter
-% Two different matrix positions are supported:
-% Configuration:
+% Converts a position in a matrix to the corresponding letter using the
+% following matrix configuration:
 %
 %     A  B 	# 	C 	# 	D 	E
 %     #  F 	G 	H 	I 	J 	#

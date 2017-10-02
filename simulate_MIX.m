@@ -2,7 +2,7 @@ function C = simulate_MIX(data,stimuli,sequence,y,nr_ept,A,gamma,trials)
 %% This function simulates/trains an unsupervised mixing classifier
 %
 % Terminology:
-% The series of flashes which is used to spell one character is called a 
+% The series of flashes which is used to spell one character is called a
 % trial. An epoch is called the segmented interval around a highlighting event.
 % Furthermore, the following names are used:
 %
@@ -65,15 +65,15 @@ function C = simulate_MIX(data,stimuli,sequence,y,nr_ept,A,gamma,trials)
 
 % Adjustable parameters
 nr_em_steps = 5;        % Number of EM-steps [Default = 5]
-nr_tpt = 16;            % Number of targets per trial
 
-% Internal parameters 
+% Internal parameters
+nr_tpt = 16;            % Number of targets per trial
 A_inv = inv(A);
 A_inv2 = A_inv.^2;
 nr_commands = size(stimuli,1);
 [nr_total,feat_dim] = size(data);
 
-% Only use specified trials
+% Select specified trials in case this option was chosen
 if ~isempty(trials)
     idx = [];
     for t=trials
@@ -91,20 +91,24 @@ else
     trials = 1:nr_trials;
 end
 
-disp('-------Start simulating online experiment!--------')
+disp('-------Start simulated online experiment!--------')
 disp('The classifier starts from a random initalization and is retrained after each trial.');
 disp('The binary target-vs-non target area under the curve (AUC) on all data ');
 disp('until the current trial is then reported, if label information are available.');
 disp('Additionally, the mixing coefficient for the target and non-target classes are reported.')
 fprintf('-----------------------------------------------------\n\n');
 
+% Init classifier
 C = init_classifier(randn(feat_dim,1),feat_dim,nr_commands,nr_ept,nr_tpt);
+
+% Loop over new trials
 for c_i = 1:nr_trials
     fprintf('Trial %3d. ', trials(c_i));
-    tic();    
-    N = c_i*nr_ept;   
+    tic();
+    N = c_i*nr_ept;
     
-    % Clear stored data fields
+    % Clear stored data fields (this is necessary becasuse the data is
+    % normalized on all data until the current trial)
     C.classifier = clear_fields(C.classifier,feat_dim);
     
     % Perform global normalization on all data until current trial
@@ -123,26 +127,24 @@ for c_i = 1:nr_trials
     stimuli_list = {};
     
     for j = 1:c_i
-        data_list{end+1} = data_norm((j-1)*nr_ept+1:j*nr_ept,:);
-        stimuli_list{end+1}   = current_stim(:,(j-1)*nr_ept+1:j*nr_ept);
+        data_list{end+1}    = data_norm((j-1)*nr_ept+1:j*nr_ept,:);
+        stimuli_list{end+1} = current_stim(:,(j-1)*nr_ept+1:j*nr_ept);
     end
     
     % Add all letters
     C.classifier = classifier_mix_add_letter(C.classifier,data_list,stimuli_list);
     
     % -----Determine covariance matrix with Ledoit-Wolf shrinkage  ------ %
-    % See the paper "Honey, I Shrunk the Sample Covariance Matrix", 2003
-    % by O. Ledoit and M. Wolf. Available from http://www.ledoit.net/honey.pdf
-    % First proposed for BCI by B. Blankertz et al., NeuroImage, 2010.
-    % Yields an analytical shrinkage parameter lamb
+    % as implemented for BCI by B. Blankertz et al., NeuroImage, 2010.
+    % Yields an analytical shrinkage parameter lamb and the regularized
+    % covariance matrix C.classifier.Sigma
     nu = mean(diag(C.classifier.XTX));
     T =  nu*eye(feat_dim,feat_dim);
     numerator = sum(sum(C.classifier.X2TX2-1.0*((C.classifier.XTX.^2)/N)));
     denominator = sum(sum((C.classifier.XTX-T).^2));
     lamb = (N/(N-1))*numerator/denominator;
     lamb = max([0,min([1,lamb])]);
-    C.classifier.Sigma = ((1-lamb)*C.classifier.XTX+lamb*T)/(N-1); %Calculation of covariance matrix with shrinkage
-    
+    C.classifier.Sigma = ((1-lamb)*C.classifier.XTX+lamb*T)/(N-1);
     % Determine whitening matrix
     [V,D] = eig(C.classifier.Sigma);
     C.classifier.Whiten = V*(diag(diag(D).^(-0.5)));
@@ -166,19 +168,19 @@ for c_i = 1:nr_trials
     llp_var_pos = sum((A_inv2(1,1)/N1)*var_O1 + (A_inv2(1,2)/N2)*var_O2);
     llp_var_neg = sum((A_inv2(2,1)/N1)*var_O1 + (A_inv2(2,2)/N2)*var_O2);
     
-    % ----------- Estimate Means with EM  ----------- %    
+    % ----------- Estimate Means with EM  ----------- %
     % EM Iterations
     for em_it = 1:nr_em_steps
         C.classifier = classifier_mix_expectation(C.classifier);
         C.classifier = classifier_mix_maximization(C.classifier);
     end
+    C.classifier = classifier_mix_expectation(C.classifier);
     
     %Extract EM means
-    C.classifier = classifier_mix_expectation(C.classifier);
     em_mean_pos = C.classifier.em_pos;
     em_mean_neg = C.classifier.em_neg;
     
-    % ----------- Mix Mean Estimations  ----------- %  
+    % ----------- Mix Mean Estimations  ----------- %
     % gamma = -1 ==> MIX means
     % gamma =  0 ==> EM-algorithm
     % gamma =  1 ==> LLP-algorithm
@@ -189,7 +191,6 @@ for c_i = 1:nr_trials
         
         gamma_pos = max([0,min([1,0.5*((EM_var_pos-llp_var_pos)/dot(pos_est_diff',pos_est_diff)+1)])]);
         gamma_neg = max([0,min([1,0.5*((EM_var_neg-llp_var_neg)/dot(neg_est_diff',neg_est_diff)+1)])]);
-        
     else
         gamma_pos = gamma;
         gamma_neg = gamma;
@@ -201,21 +202,21 @@ for c_i = 1:nr_trials
     
     %Update projections with new means
     C.classifier.w = C.classifier.Sigma\(mean_pos-mean_neg); %Sigma^(-1)*(mu_pos-mu_neg)
-
+    
     %******Evaluate******
-    projection = classifier_compute_projection(C.classifier,C.classifier.data);  % x^T*w    
+    projection = classifier_compute_projection(C.classifier,C.classifier.data);  % x^T*w
     
     % Compute AUC if labels are given
     if ~isempty(y)
         label = [y; 1-y];
         total_projection = vertcat(projection{:})';
         auc=loss_rocArea([y(1:length(total_projection)); ...
-                        1-y(1:length(total_projection))],total_projection);
+            1-y(1:length(total_projection))],total_projection);
         C.statistics.auc = [C.statistics.auc auc];
         fprintf('AUC: %.3f%%. ',100*auc);
-    end    
+    end
     fprintf('Gamma_pos: %.3f, Gamma_neg: %.3f. Runtime: %.3fs\n', gamma_pos, gamma_neg, toc());
-
+    
     % Store informative results in C.statistics
     C.statistics.projection{end+1} = projection;
     C.statistics.data_log_likelihood = [C.statistics.data_log_likelihood C.classifier.data_log_likelihood];
